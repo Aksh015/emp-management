@@ -34,10 +34,10 @@ async function sendEmail(to, subject, text) {
         });
 
         console.log('Message sent: %s', info.messageId);
-        return true;
+        return { success: true, messageId: info.messageId };
     } catch (error) {
         console.error('Error sending email:', error);
-        return false;
+        return { success: false, error: error.toString() };
     }
 }
 

@@ -39,12 +39,18 @@ router.get('/debug-email', async (req, res) => {
             });
         }
 
-        const success = await sendEmail(user, 'Test Debug Email', 'If you see this, email is working.');
+        const result = await sendEmail(user, 'Test Debug Email', 'If you see this, email is working.');
 
-        if (success) {
-            res.json({ message: 'Email sent successfully', envStatus, to: user });
+        if (result && result.success) {
+            res.json({ message: 'Email sent successfully', envStatus, to: user, details: result });
         } else {
-            res.status(500).json({ message: 'Email failed to send', envStatus });
+            console.error('Debug Email Failed:', result);
+            res.status(500).json({
+                message: 'Email failed to send',
+                envStatus,
+                error: result ? result.error : 'Unknown error',
+                details: result
+            });
         }
     } catch (err) {
         res.status(500).json({ message: 'Error in debug route', error: err.toString() });
@@ -109,7 +115,7 @@ router.post('/employees', authenticate, async (req, res) => {
         // Send credentials
         console.log(`Sending credentials to: ${email}`);
         const emailResult = await sendCredentials(email, loginId, password, firstName, req.user.companyName);
-        console.log(`Email send result: ${emailResult}`);
+        console.log('Email send result:', emailResult);
 
         res.status(201).json(newUser);
     } catch (err) {

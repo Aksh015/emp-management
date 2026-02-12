@@ -53,7 +53,7 @@ router.post('/signup', async (req, res) => {
         // Send Welcome Email
         console.log(`Attempting to send welcome email to: ${email}`);
         const emailResult = await sendCredentials(email, loginId, password, firstName, companyName);
-        console.log(`Email send result: ${emailResult}`);
+        console.log('Email send result:', emailResult);
 
         res.status(201).json({ message: 'User registered successfully', loginId });
     } catch (err) {
