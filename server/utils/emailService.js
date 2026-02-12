@@ -1,69 +1,43 @@
-const nodemailer = require('nodemailer');
+const sgMail = require('@sendgrid/mail');
 require('dotenv').config();
 
-// Create reusable transporter object using the default SMTP transport
-// Create reusable transporter object
-const isGmail = process.env.SMTP_HOST === 'smtp.gmail.com';
-
-const transporterConfig = {
-    auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-    },
-    connectionTimeout: 10000,
-    greetingTimeout: 5000,
-    logger: true,
-    debug: true,
-};
-
-if (isGmail) {
-    transporterConfig.service = 'gmail';
-} else {
-    transporterConfig.host = process.env.SMTP_HOST;
-    transporterConfig.port = process.env.SMTP_PORT;
-    transporterConfig.secure = process.env.SMTP_PORT == 465;
+// Initialize SendGrid with API key
+if (process.env.SENDGRID_API_KEY) {
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 }
-
-// Force IPv4 to avoid timeouts in some environments
-transporterConfig.tls = {
-    ciphers: 'SSLv3',
-    rejectUnauthorized: false,
-};
-transporterConfig.pool = true; // Use pooled connections
-transporterConfig.maxConnections = 1;
-transporterConfig.rateLimit = 1;
-
-const transporter = nodemailer.createTransport(transporterConfig);
 
 async function sendEmail(to, subject, text) {
     try {
-        // Check if credentials are set
-        if (!process.env.SMTP_USER || process.env.SMTP_USER === 'your_email@gmail.com') {
+        // Fallback to console logging if SendGrid is not configured
+        if (!process.env.SENDGRID_API_KEY || process.env.SENDGRID_API_KEY === 'your_sendgrid_api_key') {
             console.log('================================================================');
-            console.log(`[MOCK EMAIL SERVICE] (Configure .env to send real emails)`);
+            console.log(`[MOCK EMAIL SERVICE] (Configure SENDGRID_API_KEY to send real emails)`);
             console.log(`TO: ${to}`);
             console.log(`SUBJECT: ${subject}`);
             console.log(`BODY:`);
             console.log(text);
             console.log('================================================================');
-            return true;
+            return { success: true, messageId: 'mock-message-id' };
         }
 
-        const mailOptions = {
-            from: `"Dayflow HR" <${process.env.SMTP_USER}>`, // sender address
-            to: to, // list of receivers
-            subject: subject, // Subject line
-            text: text, // plain text body
+        const msg = {
+            to: to,
+            from: process.env.SENDGRID_FROM_EMAIL || process.env.SMTP_USER,
+            subject: subject,
+            text: text,
         };
 
-        console.log(`Attempting to send email to ${to} via ${process.env.SMTP_HOST}:${process.env.SMTP_PORT}`);
+        console.log(`Attempting to send email to ${to} via SendGrid`);
 
-        const info = await transporter.sendMail(mailOptions);
+        const response = await sgMail.send(msg);
 
-        console.log('Message sent: %s', info.messageId);
-        return { success: true, messageId: info.messageId };
+        console.log('Message sent via SendGrid:', response[0].statusCode);
+        return { success: true, messageId: response[0].headers['x-message-id'] };
     } catch (error) {
-        console.error('Error sending email:', error);
+        console.error('Error sending email via SendGrid:', error);
+        if (error.response) {
+            console.error('SendGrid error body:', error.response.body);
+        }
         return { success: false, error: error.toString() };
     }
 }
