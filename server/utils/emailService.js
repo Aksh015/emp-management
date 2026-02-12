@@ -24,6 +24,15 @@ if (isGmail) {
     transporterConfig.secure = process.env.SMTP_PORT == 465;
 }
 
+// Force IPv4 to avoid timeouts in some environments
+transporterConfig.tls = {
+    ciphers: 'SSLv3',
+    rejectUnauthorized: false,
+};
+transporterConfig.pool = true; // Use pooled connections
+transporterConfig.maxConnections = 1;
+transporterConfig.rateLimit = 1;
+
 const transporter = nodemailer.createTransport(transporterConfig);
 
 async function sendEmail(to, subject, text) {
