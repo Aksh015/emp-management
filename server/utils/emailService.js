@@ -5,11 +5,15 @@ require('dotenv').config();
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: process.env.SMTP_PORT,
-    secure: false, // true for 465, false for other ports
+    secure: process.env.SMTP_PORT == 465, // true for 465, false for other ports
     auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
     },
+    connectionTimeout: 10000, // 10 seconds
+    greetingTimeout: 5000, // 5 seconds
+    logger: true, // Log to console
+    debug: true, // Include debug info
 });
 
 async function sendEmail(to, subject, text) {
@@ -26,12 +30,16 @@ async function sendEmail(to, subject, text) {
             return true;
         }
 
-        const info = await transporter.sendMail({
+        const mailOptions = {
             from: `"Dayflow HR" <${process.env.SMTP_USER}>`, // sender address
             to: to, // list of receivers
             subject: subject, // Subject line
             text: text, // plain text body
-        });
+        };
+
+        console.log(`Attempting to send email to ${to} via ${process.env.SMTP_HOST}:${process.env.SMTP_PORT}`);
+
+        const info = await transporter.sendMail(mailOptions);
 
         console.log('Message sent: %s', info.messageId);
         return { success: true, messageId: info.messageId };
