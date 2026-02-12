@@ -70,7 +70,7 @@ router.post('/employees', authenticate, async (req, res) => {
 
         // Send credentials
         console.log(`Sending credentials to: ${email}`);
-        const emailResult = await sendCredentials(email, loginId, password, firstName);
+        const emailResult = await sendCredentials(email, loginId, password, firstName, req.user.companyName);
         console.log(`Email send result: ${emailResult}`);
 
         res.status(201).json(newUser);

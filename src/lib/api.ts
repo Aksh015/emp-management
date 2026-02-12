@@ -42,6 +42,18 @@ export const api = {
         }
         return response.json();
     },
+    changePassword: async (oldPassword: string, newPassword: string) => {
+        const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({ token: localStorage.getItem('token'), oldPassword, newPassword }),
+        });
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.message || `Change password failed`);
+        }
+        return response.json();
+    },
 
     // Employees
     getEmployees: async () => {

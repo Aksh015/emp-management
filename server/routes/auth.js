@@ -52,7 +52,7 @@ router.post('/signup', async (req, res) => {
 
         // Send Welcome Email
         console.log(`Attempting to send welcome email to: ${email}`);
-        const emailResult = await sendCredentials(email, loginId, password, firstName);
+        const emailResult = await sendCredentials(email, loginId, password, firstName, companyName);
         console.log(`Email send result: ${emailResult}`);
 
         res.status(201).json({ message: 'User registered successfully', loginId });
@@ -127,6 +127,38 @@ router.get('/verify', async (req, res) => {
         });
     } catch (err) {
         res.status(401).json({ message: 'Invalid token' });
+    }
+});
+
+// Change Password
+router.post('/change-password', async (req, res) => {
+    try {
+        const { token, oldPassword, newPassword } = req.body;
+
+        if (!token) return res.status(401).json({ message: 'No token provided' });
+
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const user = await User.findOne({ id: decoded.id });
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Verify old password
+        const isMatch = await bcrypt.compare(oldPassword, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ message: 'Incorrect old password' });
+        }
+
+        // Hash new password
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        user.password = hashedPassword;
+        await user.save();
+
+        res.json({ message: 'Password changed successfully' });
+    } catch (err) {
+        console.error('Change Password Error:', err);
+        res.status(500).json({ message: 'Server error' });
     }
 });
 

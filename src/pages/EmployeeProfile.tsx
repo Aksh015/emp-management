@@ -17,6 +17,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { PrivateInfoTab } from "@/components/profile/PrivateInfoTab";
 import { SalaryInfoTab } from "@/components/profile/SalaryInfoTab";
 import { CertificationsTab } from "@/components/profile/CertificationsTab";
+import { ChangePasswordTab } from "@/components/profile/ChangePasswordTab";
 
 export default function EmployeeProfile() {
   const { id } = useParams();
@@ -278,6 +279,7 @@ export default function EmployeeProfile() {
           <TabsTrigger value="private">Private Info</TabsTrigger>
           <TabsTrigger value="salary">Salary Info</TabsTrigger>
           <TabsTrigger value="certification">Certification</TabsTrigger>
+          <TabsTrigger value="security">Security</TabsTrigger>
         </TabsList>
 
         {/* Resume/About Tab */}
@@ -361,6 +363,19 @@ export default function EmployeeProfile() {
             onAddCertificate={handleAddCertificate}
             isOwnerOrAdmin={canEdit}
           />
+        </TabsContent>
+
+        {/* Security Tab (Password Change) */}
+        <TabsContent value="security">
+          {isOwnProfile ? (
+            <ChangePasswordTab />
+          ) : (
+            <Card>
+              <CardContent className="pt-6 text-center text-muted-foreground">
+                You can only change your own password.
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
       </Tabs>

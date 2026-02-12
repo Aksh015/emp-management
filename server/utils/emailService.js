@@ -41,11 +41,11 @@ async function sendEmail(to, subject, text) {
     }
 }
 
-async function sendCredentials(email, loginId, password, name) {
-    const subject = 'Welcome to Dayflow HR - Your Login Credentials';
+async function sendCredentials(email, loginId, password, name, companyName) {
+    const subject = `Welcome to ${companyName} - Your Login Credentials`;
     const body = `Dear ${name},
 
-Welcome to Dayflow HR! Your account has been created.
+Welcome to ${companyName}! Your account has been created.
 
 Here are your login credentials:
 Login ID: ${loginId}
@@ -54,7 +54,7 @@ Password: ${password}
 Please request a password change upon your first login.
 
 Best regards,
-Dayflow HR Team`;
+${companyName} HR Team`;
 
     return sendEmail(email, subject, body);
 }
