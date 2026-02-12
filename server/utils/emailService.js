@@ -2,19 +2,29 @@ const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 // Create reusable transporter object using the default SMTP transport
-const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: process.env.SMTP_PORT,
-    secure: process.env.SMTP_PORT == 465, // true for 465, false for other ports
+// Create reusable transporter object
+const isGmail = process.env.SMTP_HOST === 'smtp.gmail.com';
+
+const transporterConfig = {
     auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
     },
-    connectionTimeout: 10000, // 10 seconds
-    greetingTimeout: 5000, // 5 seconds
-    logger: true, // Log to console
-    debug: true, // Include debug info
-});
+    connectionTimeout: 10000,
+    greetingTimeout: 5000,
+    logger: true,
+    debug: true,
+};
+
+if (isGmail) {
+    transporterConfig.service = 'gmail';
+} else {
+    transporterConfig.host = process.env.SMTP_HOST;
+    transporterConfig.port = process.env.SMTP_PORT;
+    transporterConfig.secure = process.env.SMTP_PORT == 465;
+}
+
+const transporter = nodemailer.createTransport(transporterConfig);
 
 async function sendEmail(to, subject, text) {
     try {
