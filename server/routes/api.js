@@ -13,6 +13,44 @@ const { sendCredentials } = require('../utils/emailService');
 const upload = require('../utils/upload');
 const authenticate = require('../middleware/auth');
 
+const { sendEmail } = require('../utils/emailService');
+
+// --- Debug ---
+router.get('/debug-email', async (req, res) => {
+    try {
+        const user = process.env.SMTP_USER;
+        const pass = process.env.SMTP_PASS;
+        const host = process.env.SMTP_HOST;
+        const port = process.env.SMTP_PORT;
+
+        const envStatus = {
+            SMTP_USER: user ? `Set (${user.length} chars)` : 'Missing',
+            SMTP_PASS: pass ? `Set (${pass.length} chars)` : 'Missing',
+            SMTP_HOST: host || 'Missing',
+            SMTP_PORT: port || 'Missing'
+        };
+
+        console.log('Debug Email Env:', envStatus);
+
+        if (!user || !pass) {
+            return res.status(500).json({
+                message: 'Environment variables missing',
+                envStatus
+            });
+        }
+
+        const success = await sendEmail(user, 'Test Debug Email', 'If you see this, email is working.');
+
+        if (success) {
+            res.json({ message: 'Email sent successfully', envStatus, to: user });
+        } else {
+            res.status(500).json({ message: 'Email failed to send', envStatus });
+        }
+    } catch (err) {
+        res.status(500).json({ message: 'Error in debug route', error: err.toString() });
+    }
+});
+
 // --- Employees ---
 
 // Get all employees
