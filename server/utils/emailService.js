@@ -1,39 +1,74 @@
-const nodemailer = require('nodemailer');
+const { google } = require('googleapis');
 require('dotenv').config();
 
-// Create reusable transporter object using the default SMTP transport
-const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: process.env.SMTP_PORT,
-    secure: false, // true for 465, false for other ports
-    auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-    },
-});
+const OAuth2 = google.auth.OAuth2;
 
-async function sendEmail(to, subject, text) {
+const createTransporter = async () => {
     try {
-        // Check if credentials are set
-        if (!process.env.SMTP_USER || process.env.SMTP_USER === 'your_email@gmail.com') {
-            console.log('================================================================');
-            console.log(`[MOCK EMAIL SERVICE] (Configure .env to send real emails)`);
-            console.log(`TO: ${to}`);
-            console.log(`SUBJECT: ${subject}`);
-            console.log(`BODY:`);
-            console.log(text);
-            console.log('================================================================');
-            return true;
-        }
+        const oauth2Client = new OAuth2(
+            process.env.GOOGLE_CLIENT_ID,
+            process.env.GOOGLE_CLIENT_SECRET,
+            "https://developers.google.com/oauthplayground"
+        );
 
-        const info = await transporter.sendMail({
-            from: `"Dayflow HR" <${process.env.SMTP_USER}>`, // sender address
-            to: to, // list of receivers
-            subject: subject, // Subject line
-            text: text, // plain text body
+        oauth2Client.setCredentials({
+            refresh_token: process.env.GOOGLE_REFRESH_TOKEN
         });
 
-        console.log('Message sent: %s', info.messageId);
+        const accessToken = await new Promise((resolve, reject) => {
+            oauth2Client.getAccessToken((err, token) => {
+                if (err) {
+                    console.error('Failed to create access token:', err);
+                    reject(err);
+                }
+                resolve(token);
+            });
+        });
+
+        return { oauth2Client, accessToken };
+    } catch (err) {
+        console.error('Error creating transporter:', err);
+        return null;
+    }
+};
+
+const makeBody = (to, from, subject, message) => {
+    const str = [
+        `To: ${to}`,
+        `From: ${from}`,
+        `Subject: ${subject}`,
+        `MIME-Version: 1.0`,
+        `Content-Type: text/html; charset=UTF-8`,
+        ``,
+        message
+    ].join('\n');
+
+    return Buffer.from(str)
+        .toString('base64')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+};
+
+async function sendEmail(to, subject, text, html) {
+    try {
+        const { oauth2Client } = await createTransporter();
+        const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+
+        const from = `Dayflow HR <${process.env.EMAIL_USER}>`;
+        const body = html || text.replace(/\n/g, '<br>');
+        const raw = makeBody(to, from, subject, body);
+
+        console.log(`Attempting to send email via Gmail API to: ${to}`);
+
+        const result = await gmail.users.messages.send({
+            userId: 'me',
+            requestBody: {
+                raw: raw,
+            },
+        });
+
+        console.log(`Email sent successfully to ${to}. Message ID: ${result.data.id}`);
         return true;
     } catch (error) {
         console.error('Error sending email:', error);
@@ -43,7 +78,7 @@ async function sendEmail(to, subject, text) {
 
 async function sendCredentials(email, loginId, password, name, companyName) {
     const subject = `Welcome to ${companyName} - Your Login Credentials`;
-    const body = `Dear ${name},
+    const text = `Dear ${name},
 
 Welcome to ${companyName}! Your account has been created.
 
@@ -56,7 +91,24 @@ Please request a password change upon your first login.
 Best regards,
 ${companyName} HR Team`;
 
-    return sendEmail(email, subject, body);
+    const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2>Welcome to ${companyName}!</h2>
+            <p>Dear ${name},</p>
+            <p>Your account has been created successfully.</p>
+            <div style="background-color: #f4f4f4; padding: 20px; border-radius: 5px; margin: 20px 0;">
+                <h3>Your Login Credentials:</h3>
+                <p><strong>Login ID:</strong> ${loginId}</p>
+                <p><strong>Password:</strong> ${password}</p>
+            </div>
+            <p>Please request a password change upon your first login.</p>
+            <br>
+            <p>Best regards,</p>
+            <p>${companyName} HR Team</p>
+        </div>
+    `;
+
+    return sendEmail(email, subject, text, html);
 }
 
 module.exports = { sendEmail, sendCredentials };
